@@ -38,6 +38,7 @@ namespace SK.Libretro.Unity
         [field: SerializeField] public string CoreName { get; private set; }
         [field: SerializeField] public string GamesDirectory { get; private set; }
         [field: SerializeField] public string[] GameNames { get; private set; }
+        [field: SerializeField] public bool StartOnLoad { get; private set; }
 
         public event Action OnInstanceStarted;
         public event Action OnInstanceStopped;
@@ -97,6 +98,10 @@ namespace SK.Libretro.Unity
             CoreName       = coreName;
             GamesDirectory = gamesDirectory;
             GameNames      = gameNames;
+            if (StartOnLoad)
+            {
+                Invoke("StartContent", 1f);
+            }
         }
 
         public void DeInitialize()

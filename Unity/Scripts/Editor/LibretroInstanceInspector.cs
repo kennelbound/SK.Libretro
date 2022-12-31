@@ -38,6 +38,7 @@ namespace SK.Libretro.Unity.Editor
         private SerializedProperty _coreNameProperty;
         private SerializedProperty _gameDirectoryProperty;
         private SerializedProperty _gamesProperty;
+        private SerializedProperty _startOnLoadProperty;
 
         private void OnEnable()
         {
@@ -50,6 +51,7 @@ namespace SK.Libretro.Unity.Editor
             _coreNameProperty          = serializedObject.FindProperty($"<{nameof(LibretroInstance.CoreName)}>k__BackingField");
             _gameDirectoryProperty     = serializedObject.FindProperty($"<{nameof(LibretroInstance.GamesDirectory)}>k__BackingField");
             _gamesProperty             = serializedObject.FindProperty($"<{nameof(LibretroInstance.GameNames)}>k__BackingField");
+            _startOnLoadProperty       = serializedObject.FindProperty($"<{nameof(LibretroInstance.StartOnLoad)}>k__BackingField");
         }
 
         //public override VisualElement CreateInspectorGUI()
@@ -73,6 +75,7 @@ namespace SK.Libretro.Unity.Editor
             _ = EditorGUILayout.PropertyField(_rendererProperty);
             _ = EditorGUILayout.PropertyField(_colliderProperty);
             _ = EditorGUILayout.PropertyField(_viewerProperty);
+            _ = EditorGUILayout.PropertyField(_startOnLoadProperty);
 
             GUILayout.Space(8f);
             _ = EditorGUILayout.PropertyField(_settingsProperty);
