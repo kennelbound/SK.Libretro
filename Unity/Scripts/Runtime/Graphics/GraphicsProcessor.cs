@@ -33,101 +33,121 @@ namespace SK.Libretro.Unity
         private FilterMode _filterMode;
         private Texture2D _texture;
         private JobHandle _jobHandle;
+        private ThreadDispatcher _threadDispatcher;
 
-        public GraphicsProcessor(Action<Texture> textureRecreatedCallback, FilterMode filterMode)
+        public GraphicsProcessor(Action<Texture> textureRecreatedCallback, FilterMode filterMode, ThreadDispatcher threadDispatcher)
         {
             _onTextureRecreated = textureRecreatedCallback;
             _filterMode         = filterMode;
+            _threadDispatcher = threadDispatcher;
         }
 
-        public void Dispose() => MainThreadDispatcher.Enqueue(() =>
+        public void Dispose()
         {
-            if (!_jobHandle.IsCompleted)
+            _threadDispatcher.Enqueue(() =>
+            {
+                if (!_jobHandle.IsCompleted)
+                    _jobHandle.Complete();
+
+                if (Application.isPlaying && _texture)
+                    UnityEngine.Object.Destroy(_texture);
+            });
+        }
+
+        public void SetFilterMode(FilterMode filterMode)
+        {
+            _threadDispatcher.Enqueue(() =>
+            {
+                _filterMode = filterMode;
+
+                if (_texture)
+                    _texture.filterMode = filterMode;
+            });
+        }
+
+        public unsafe void ProcessFrame0RGB1555(IntPtr data, int width, int height, int pitch)
+        {
+            _threadDispatcher.Enqueue(() =>
+            {
+                CreateTexture(width, height);
+                if (!_texture)
+                    return;
+
+                _jobHandle = new Frame0RGB1555Job
+                {
+                    SourceData = (ushort*)data,
+                    Width = width,
+                    Height = height,
+                    PitchPixels = pitch / sizeof(ushort),
+                    TextureData = _texture.GetRawTextureData<uint>()
+                }.Schedule(width * height, 64);
                 _jobHandle.Complete();
+                _texture.Apply();
+            });
+        }
 
-            if (Application.isPlaying && _texture)
-                UnityEngine.Object.Destroy(_texture);
-        });
-
-        public void SetFilterMode(FilterMode filterMode) => MainThreadDispatcher.Enqueue(() =>
+        public unsafe void ProcessFrameXRGB8888(IntPtr data, int width, int height, int pitch)
         {
-            _filterMode = filterMode;
-
-            if (_texture)
-                _texture.filterMode = filterMode;
-        });
-
-        public unsafe void ProcessFrame0RGB1555(IntPtr data, int width, int height, int pitch) => MainThreadDispatcher.Enqueue(() =>
-        {
-            CreateTexture(width, height);
-            if (!_texture)
-                return;
-
-            _jobHandle = new Frame0RGB1555Job
+            _threadDispatcher.Enqueue(() =>
             {
-                SourceData  = (ushort*)data,
-                Width       = width,
-                Height      = height,
-                PitchPixels = pitch / sizeof(ushort),
-                TextureData = _texture.GetRawTextureData<uint>()
-            }.Schedule(width * height, 64);
-            _jobHandle.Complete();
-            _texture.Apply();
-        });
+                CreateTexture(width, height);
+                if (!_texture)
+                    return;
 
-        public unsafe void ProcessFrameXRGB8888(IntPtr data, int width, int height, int pitch) => MainThreadDispatcher.Enqueue(() =>
+                _jobHandle = new FrameXRGB8888Job
+                {
+                    SourceData = (uint*)data,
+                    Width = width,
+                    Height = height,
+                    PitchPixels = pitch / sizeof(uint),
+                    TextureData = _texture.GetRawTextureData<uint>()
+                }.Schedule(width * height, 64);
+                _jobHandle.Complete();
+                _texture.Apply();
+            });
+        }
+
+        public unsafe void ProcessFrameXRGB8888VFlip(IntPtr data, int width, int height, int pitch)
         {
-            CreateTexture(width, height);
-            if (!_texture)
-                return;
-
-            _jobHandle = new FrameXRGB8888Job
+            _threadDispatcher.Enqueue(() =>
             {
-                SourceData  = (uint*)data,
-                Width       = width,
-                Height      = height,
-                PitchPixels = pitch / sizeof(uint),
-                TextureData = _texture.GetRawTextureData<uint>()
-            }.Schedule(width * height, 64);
-            _jobHandle.Complete();
-            _texture.Apply();
-        });
+                CreateTexture(width, height);
+                if (!_texture)
+                    return;
 
-        public unsafe void ProcessFrameXRGB8888VFlip(IntPtr data, int width, int height, int pitch) => MainThreadDispatcher.Enqueue(() =>
+                _jobHandle = new FrameXRGB8888VFlipJob
+                {
+                    SourceData = (uint*)data,
+                    Width = width,
+                    Height = height,
+                    PitchPixels = pitch / sizeof(uint),
+                    TextureData = _texture.GetRawTextureData<uint>()
+                }.Schedule(width * height, 64);
+                _jobHandle.Complete();
+                _texture.Apply();
+            });
+        }
+
+        public unsafe void ProcessFrameRGB565(IntPtr data, int width, int height, int pitch)
         {
-            CreateTexture(width, height);
-            if (!_texture)
-                return;
-
-            _jobHandle = new FrameXRGB8888VFlipJob
+            _threadDispatcher.Enqueue(() =>
             {
-                SourceData  = (uint*)data,
-                Width       = width,
-                Height      = height,
-                PitchPixels = pitch / sizeof(uint),
-                TextureData = _texture.GetRawTextureData<uint>()
-            }.Schedule(width * height, 64);
-            _jobHandle.Complete();
-            _texture.Apply();
-        });
+                CreateTexture(width, height);
+                if (!_texture)
+                    return;
 
-        public unsafe void ProcessFrameRGB565(IntPtr data, int width, int height, int pitch) => MainThreadDispatcher.Enqueue(() =>
-        {
-            CreateTexture(width, height);
-            if (!_texture)
-                return;
-
-            _jobHandle = new FrameRGB565Job
-            {
-                SourceData  = (ushort*)data,
-                Width       = width,
-                Height      = height,
-                PitchPixels = pitch / sizeof(ushort),
-                TextureData = _texture.GetRawTextureData<uint>()
-            }.Schedule(width * height, 64);
-            _jobHandle.Complete();
-            _texture.Apply();
-        });
+                _jobHandle = new FrameRGB565Job
+                {
+                    SourceData = (ushort*)data,
+                    Width = width,
+                    Height = height,
+                    PitchPixels = pitch / sizeof(ushort),
+                    TextureData = _texture.GetRawTextureData<uint>()
+                }.Schedule(width * height, 64);
+                _jobHandle.Complete();
+                _texture.Apply();
+            });
+        }
 
         private void CreateTexture(int width, int height)
         {

@@ -40,7 +40,7 @@ namespace SK.Libretro.NAudio
         private VolumeSampleProvider _volumeProvider;
         private WaveBuffer _waveBuffer;
 
-        public void Init(int sampleRate)
+        public void Init(int sampleRate, ThreadDispatcher threadDispatcher)
         {
             try
             {

@@ -51,10 +51,10 @@ namespace SK.Libretro
             _sampleBatchCallback = SampleBatchCallback;
         }
 
-        public void Init(bool enabled)
+        public void Init(bool enabled, ThreadDispatcher threadDispatcher)
         {
             Enabled = enabled;
-            _processor.Init(_wrapper.Game.SystemAVInfo.SampleRate);
+            _processor.Init(_wrapper.Game.SystemAVInfo.SampleRate, threadDispatcher);
         }
 
         public void Dispose() => _processor.Dispose();

@@ -111,6 +111,11 @@ namespace SK.Libretro.Unity
             GameNames      = null;
         }
 
+        public void Update()
+        {
+            _bridge?.MainThreadUpdate();
+        }
+
         public void StartContent()
         {
             if (Running)

@@ -185,7 +185,10 @@ namespace SK.Libretro
 
         public void InitGraphics(bool enabled = true) => GraphicsHandler.Init(enabled);
 
-        public void InitAudio(bool enabled = true) => AudioHandler.Init(enabled);
+        public void InitAudio(bool enabled, ThreadDispatcher threadDispatcher)
+        {
+            AudioHandler.Init(enabled, threadDispatcher);
+        }
 
         public bool GetSystemDirectory(IntPtr data)
         {

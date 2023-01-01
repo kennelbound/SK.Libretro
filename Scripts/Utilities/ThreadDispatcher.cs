@@ -1,4 +1,4 @@
-﻿/* MIT License
+/* MIT License
 
  * Copyright (c) 2021-2022 Skurdt
  *
@@ -23,39 +23,23 @@
 using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using UnityEngine;
 
-namespace SK.Libretro.Unity
+namespace SK.Libretro
 {
-    internal sealed class MainThreadDispatcher : MonoBehaviour
+    public sealed class ThreadDispatcher
     {
-        private static readonly ConcurrentQueue<Func<ValueTask>> _executionQueue = new();
-        private static MainThreadDispatcher _instance;
+        private readonly ConcurrentQueue<Func<ValueTask>> _executionQueue = new();
 
-        public static void Construct()
-        {
-            if (_instance)
-                return;
-
-            _instance = FindObjectOfType<MainThreadDispatcher>();
-            if (!_instance)
-            {
-                GameObject obj = new("MainThreadDispatcher");
-                _instance = obj.AddComponent<MainThreadDispatcher>();
-                DontDestroyOnLoad(obj);
-            }
-        }
-
-        private async void Update()
+        public async void Dequeue()
         {
             while (_executionQueue.Count > 0)
                 if (_executionQueue.TryDequeue(out Func<ValueTask> action))
                     await action();
         }
 
-        public static void Enqueue(Func<ValueTask> action) => _executionQueue.Enqueue(async () => await action());
+        public void Enqueue(Func<ValueTask> action) => _executionQueue.Enqueue(async () => await action());
 
-        public static void Enqueue(Action action) => Enqueue(async () =>
+        public void Enqueue(Action action) => Enqueue(async () =>
         {
             action();
             await Task.Yield();

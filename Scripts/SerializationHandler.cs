@@ -143,7 +143,7 @@ namespace SK.Libretro
                 IntPtr ptr = Marshal.UnsafeAddrOfPinnedArrayElement(data, 0);
                 bool result = _wrapper.Core.Unserialize(ptr, stateSize);
                 if (result)
-                    _wrapper.AudioHandler.Init(true);
+                    _wrapper.AudioHandler.Init(true, null);
                 return result;
             }
             catch (Exception e)

@@ -26,7 +26,7 @@ namespace SK.Libretro
 {
     internal sealed class NullAudioProcessor : IAudioProcessor
     {
-        public void Init(int sampleRate) { }
+        public void Init(int sampleRate, ThreadDispatcher threadDispatcher) { }
         public void Dispose() { }
         public void ProcessSample(short left, short right) { }
         public void ProcessSampleBatch(IntPtr data, nuint frames) { }

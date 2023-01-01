@@ -354,6 +354,8 @@ namespace SK.Libretro.Unity
         private Thread _thread;
         private Texture2D _texture;
 
+        private ThreadDispatcher _threadDispatcher;
+
         public Bridge(LibretroInstance instance)
         {
             _instanceComponent = instance;
@@ -369,7 +371,7 @@ namespace SK.Libretro.Unity
             ReadSystemMemory = instance.Settings.ReadSystemMemory;
             ReadVideoMemory  = instance.Settings.ReadVideoMemory;
 
-            MainThreadDispatcher.Construct();
+            _threadDispatcher = new ThreadDispatcher();
         }
 
         public void StartContent(string coreName,
@@ -440,8 +442,8 @@ namespace SK.Libretro.Unity
                     return;
                 }
 
-                wrapper.InitGraphics();
-                wrapper.InitAudio();
+                wrapper.InitGraphics(true);
+                wrapper.InitAudio(true, _threadDispatcher);
                 wrapper.InputHandler.Enabled = true;
                 DiskHandlerEnabled = wrapper.DiskHandler.Enabled;
                 ControllersMap     = wrapper.InputHandler.DeviceMap;
@@ -603,7 +605,7 @@ namespace SK.Libretro.Unity
 
             _manualResetEvent.Reset();
             using CancellationTokenSource tokenSource = new();
-            MainThreadDispatcher.Enqueue(() =>
+            _threadDispatcher.Enqueue(() =>
             {
                 action();
                 _manualResetEvent.Set();
@@ -622,7 +624,7 @@ namespace SK.Libretro.Unity
 
             using CancellationTokenSource getComponentsTokenSource = new();
             _manualResetEvent.Reset();
-            MainThreadDispatcher.Enqueue(() =>
+            _threadDispatcher.Enqueue(() =>
             {
                 audio = GetAudioProcessor(_instanceComponent.transform);
                 input = GetInputProcessor(_instanceComponent.Settings.AnalogToDigital);
@@ -634,9 +636,17 @@ namespace SK.Libretro.Unity
             return (log, graphics, audio, input, led);
         }
 
+        public void MainThreadUpdate()
+        {
+            _threadDispatcher.Dequeue();
+        }
+
         private static ILogProcessor GetLogProcessor() => new LogProcessor();
 
-        private IGraphicsProcessor GetGraphicsProcessor() => new GraphicsProcessor(SetTexture, FilterMode.Point);
+        private IGraphicsProcessor GetGraphicsProcessor()
+        {
+            return new GraphicsProcessor(SetTexture, FilterMode.Point, _threadDispatcher);
+        }
 
         private static IAudioProcessor GetAudioProcessor(Transform instanceTransform)
         {
@@ -681,7 +691,7 @@ namespace SK.Libretro.Unity
 
         private static ILedProcessor GetLedProcessor() => Object.FindObjectOfType<LedProcessorBase>(true);
 
-        private void TakeScreenshot(string screenshotPath) => MainThreadDispatcher.Enqueue(async () =>
+        private void TakeScreenshot(string screenshotPath) => _threadDispatcher.Enqueue(async () =>
         {
             if (!_texture || !Running)
                 return;
@@ -698,7 +708,7 @@ namespace SK.Libretro.Unity
             File.WriteAllBytes(screenshotPath, bytes);
         });
 
-        private void StopThread() => MainThreadDispatcher.Enqueue(() =>
+        private void StopThread() => _threadDispatcher.Enqueue(() =>
         {
             if (_thread is not null)
                 if (!_thread.Join(2000))
